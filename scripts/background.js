@@ -1,9 +1,5 @@
 chrome.runtime.onMessage.addListener(async msg => {
 	if (msg.logOptions) sendToLogs(msg.logOptions);
-	if (msg.poll && (navigator && navigator.onLine)) {
-		var p = await getOptions('polling');
-		if (p !== 'off') poll(msg.poll);
-	}
 	if (msg.wakeUp) await wakeUpTask();
 	if (msg.close) setTimeout(_ => {
 		if (msg.tabId) chrome.tabs.remove(msg.tabId);
