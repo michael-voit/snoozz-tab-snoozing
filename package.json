@@ -1,0 +1,30 @@
+{
+  "name": "snoozz-tab-snoozing",
+  "version": "1.0.0",
+  "description": "<p align=\"center\">   <img src=\"https://i.imgur.com/h6piEH8.png\" alt=\"Snoozz logo\"/> </p>",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:sw": "node build-service-worker.js",
+    "build": "npm run build:sw && python3 build.py"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michael-voit/snoozz-tab-snoozing.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/michael-voit/snoozz-tab-snoozing/issues"
+  },
+  "homepage": "https://github.com/michael-voit/snoozz-tab-snoozing#readme",
+  "devDependencies": {
+    "csso-cli": "^4.0.2",
+    "esbuild": "^0.27.0",
+    "uglify-js": "^3.19.3"
+  }
+}

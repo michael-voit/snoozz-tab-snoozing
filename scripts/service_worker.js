@@ -1,3 +1,24 @@
+// ====== dayjs.min.js ======
+// DayJS Core
+globalThis.dayjs=function(){"use strict";var t=1e3,n=6e4,e=36e5,r="millisecond",i="second",s="minute",u="hour",a="day",o="week",h="month",f="quarter",c="year",d="date",$="Invalid Date",l=/^(\d{4})[-/]?(\d{1,2})?[-/]?(\d{0,2})[^0-9]*(\d{1,2})?:?(\d{1,2})?:?(\d{1,2})?[.:]?(\d+)?$/,M=/\[([^\]]+)]|Y{1,4}|M{1,4}|D{1,2}|d{1,4}|H{1,2}|h{1,2}|a|A|m{1,2}|s{1,2}|Z{1,2}|SSS/g,y={name:"en",weekdays:"Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday".split("_"),months:"January_February_March_April_May_June_July_August_September_October_November_December".split("_")},m=function(t,n,e){var r=String(t);return!r||r.length>=n?t:""+Array(n+1-r.length).join(e)+t},g={s:m,z:function(t){var n=-t.utcOffset(),e=Math.abs(n),r=Math.floor(e/60),i=e%60;return(n<=0?"+":"-")+m(r,2,"0")+":"+m(i,2,"0")},m:function t(n,e){if(n.date()<e.date())return-t(e,n);var r=12*(e.year()-n.year())+(e.month()-n.month()),i=n.clone().add(r,h),s=e-i<0,u=n.clone().add(r+(s?-1:1),h);return+(-(r+(e-i)/(s?i-u:u-i))||0)},a:function(t){return t<0?Math.ceil(t)||0:Math.floor(t)},p:function(t){return{M:h,y:c,w:o,d:a,D:d,h:u,m:s,s:i,ms:r,Q:f}[t]||String(t||"").toLowerCase().replace(/s$/,"")},u:function(t){return void 0===t}},D="en",v={};v[D]=y;var S=function(t){return t instanceof _},p=function(t,n,e){var r;if(!t)return D;if("string"==typeof t)v[t]&&(r=t),n&&(v[t]=n,r=t);else{var i=t.name;v[i]=t,r=i}return!e&&r&&(D=r),r||!e&&D},w=function(t,n){if(S(t))return t.clone();var e="object"==typeof n?n:{};return e.date=t,e.args=arguments,new _(e)},O=g;O.l=p,O.i=S,O.w=function(t,n){return w(t,{locale:n.$L,utc:n.$u,x:n.$x,$offset:n.$offset})};var _=function(){function y(t){this.$L=p(t.locale,null,!0),this.parse(t)}var m=y.prototype;return m.parse=function(t){this.$d=function(t){var n=t.date,e=t.utc;if(null===n)return new Date(NaN);if(O.u(n))return new Date;if(n instanceof Date)return new Date(n);if("string"==typeof n&&!/Z$/i.test(n)){var r=n.match(l);if(r){var i=r[2]-1||0,s=(r[7]||"0").substring(0,3);return e?new Date(Date.UTC(r[1],i,r[3]||1,r[4]||0,r[5]||0,r[6]||0,s)):new Date(r[1],i,r[3]||1,r[4]||0,r[5]||0,r[6]||0,s)}}return new Date(n)}(t),this.$x=t.x||{},this.init()},m.init=function(){var t=this.$d;this.$y=t.getFullYear(),this.$M=t.getMonth(),this.$D=t.getDate(),this.$W=t.getDay(),this.$H=t.getHours(),this.$m=t.getMinutes(),this.$s=t.getSeconds(),this.$ms=t.getMilliseconds()},m.$utils=function(){return O},m.isValid=function(){return!(this.$d.toString()===$)},m.isSame=function(t,n){var e=w(t);return this.startOf(n)<=e&&e<=this.endOf(n)},m.isAfter=function(t,n){return w(t)<this.startOf(n)},m.isBefore=function(t,n){return this.endOf(n)<w(t)},m.$g=function(t,n,e){return O.u(t)?this[n]:this.set(e,t)},m.unix=function(){return Math.floor(this.valueOf()/1e3)},m.valueOf=function(){return this.$d.getTime()},m.startOf=function(t,n){var e=this,r=!!O.u(n)||n,f=O.p(t),$=function(t,n){var i=O.w(e.$u?Date.UTC(e.$y,n,t):new Date(e.$y,n,t),e);return r?i:i.endOf(a)},l=function(t,n){return O.w(e.toDate()[t].apply(e.toDate("s"),(r?[0,0,0,0]:[23,59,59,999]).slice(n)),e)},M=this.$W,y=this.$M,m=this.$D,g="set"+(this.$u?"UTC":"");switch(f){case c:return r?$(1,0):$(31,11);case h:return r?$(1,y):$(0,y+1);case o:var D=this.$locale().weekStart||0,v=(M<D?M+7:M)-D;return $(r?m-v:m+(6-v),y);case a:case d:return l(g+"Hours",0);case u:return l(g+"Minutes",1);case s:return l(g+"Seconds",2);case i:return l(g+"Milliseconds",3);default:return this.clone()}},m.endOf=function(t){return this.startOf(t,!1)},m.$set=function(t,n){var e,o=O.p(t),f="set"+(this.$u?"UTC":""),$=(e={},e[a]=f+"Date",e[d]=f+"Date",e[h]=f+"Month",e[c]=f+"FullYear",e[u]=f+"Hours",e[s]=f+"Minutes",e[i]=f+"Seconds",e[r]=f+"Milliseconds",e)[o],l=o===a?this.$D+(n-this.$W):n;if(o===h||o===c){var M=this.clone().set(d,1);M.$d[$](l),M.init(),this.$d=M.set(d,Math.min(this.$D,M.daysInMonth())).$d}else $&&this.$d[$](l);return this.init(),this},m.set=function(t,n){return this.clone().$set(t,n)},m.get=function(t){return this[O.p(t)]()},m.add=function(r,f){var d,$=this;r=Number(r);var l=O.p(f),M=function(t){var n=w($);return O.w(n.date(n.date()+Math.round(t*r)),$)};if(l===h)return this.set(h,this.$M+r);if(l===c)return this.set(c,this.$y+r);if(l===a)return M(1);if(l===o)return M(7);var y=(d={},d[s]=n,d[u]=e,d[i]=t,d)[l]||1,m=this.$d.getTime()+r*y;return O.w(m,this)},m.subtract=function(t,n){return this.add(-1*t,n)},m.format=function(t){var n=this;if(!this.isValid())return $;var e=t||"YYYY-MM-DDTHH:mm:ssZ",r=O.z(this),i=this.$locale(),s=this.$H,u=this.$m,a=this.$M,o=i.weekdays,h=i.months,f=function(t,r,i,s){return t&&(t[r]||t(n,e))||i[r].substr(0,s)},c=function(t){return O.s(s%12||12,t,"0")},d=i.meridiem||function(t,n,e){var r=t<12?"AM":"PM";return e?r.toLowerCase():r},l={YY:String(this.$y).slice(-2),YYYY:this.$y,M:a+1,MM:O.s(a+1,2,"0"),MMM:f(i.monthsShort,a,h,3),MMMM:f(h,a),D:this.$D,DD:O.s(this.$D,2,"0"),d:String(this.$W),dd:f(i.weekdaysMin,this.$W,o,2),ddd:f(i.weekdaysShort,this.$W,o,3),dddd:o[this.$W],H:String(s),HH:O.s(s,2,"0"),h:c(1),hh:c(2),a:d(s,u,!0),A:d(s,u,!1),m:String(u),mm:O.s(u,2,"0"),s:String(this.$s),ss:O.s(this.$s,2,"0"),SSS:O.s(this.$ms,3,"0"),Z:r};return e.replace(M,(function(t,n){return n||l[t]||r.replace(":","")}))},m.utcOffset=function(){return 15*-Math.round(this.$d.getTimezoneOffset()/15)},m.diff=function(r,d,$){var l,M=O.p(d),y=w(r),m=(y.utcOffset()-this.utcOffset())*n,g=this-y,D=O.m(this,y);return D=(l={},l[c]=D/12,l[h]=D,l[f]=D/3,l[o]=(g-m)/6048e5,l[a]=(g-m)/864e5,l[u]=g/e,l[s]=g/n,l[i]=g/t,l)[M]||g,$?D:O.a(D)},m.daysInMonth=function(){return this.endOf(h).$D},m.$locale=function(){return v[this.$L]},m.locale=function(t,n){if(!t)return this.$L;var e=this.clone(),r=p(t,n,!0);return r&&(e.$L=r),e},m.clone=function(){return O.w(this.$d,this)},m.toDate=function(){return new Date(this.valueOf())},m.toJSON=function(){return this.isValid()?this.toISOString():null},m.toISOString=function(){return this.$d.toISOString()},m.toString=function(){return this.$d.toUTCString()},y}(),Y=_.prototype;return w.prototype=Y,[["$ms",r],["$s",i],["$m",s],["$H",u],["$W",a],["$M",h],["$y",c],["$D",d]].forEach((function(t){Y[t[1]]=function(n){return this.$g(n,t[0],t[1])}})),w.extend=function(t,n){return t.$i||(t(n,_,w),t.$i=!0),w},w.locale=p,w.isDayjs=S,w.unix=function(t){return w(1e3*t)},w.en=v[D],w.Ls=v,w.p={},w}();
+
+// 	relativeTime plugin
+globalThis.p_relativeTime=function(){"use strict";return function(r,t,n){r=r||{};var e=t.prototype,o={future:"in %s",past:"%s ago",s:"a few seconds",m:"a minute",mm:"%d minutes",h:"an hour",hh:"%d hours",d:"a day",dd:"%d days",M:"a month",MM:"%d months",y:"a year",yy:"%d years"};function a(r,t,n,o){return e.fromToBase(r,t,n,o)}function i(r){return r.$u?n.utc():n()}n.en.relativeTime=o,e.fromToBase=function(t,e,a,i,u){for(var d,s,f=a.$locale().relativeTime||o,h=r.thresholds||[{l:"s",r:44,d:"second"},{l:"m",r:89},{l:"mm",r:44,d:"minute"},{l:"h",r:89},{l:"hh",r:21,d:"hour"},{l:"d",r:35},{l:"dd",r:25,d:"day"},{l:"M",r:45},{l:"MM",r:10,d:"month"},{l:"y",r:17},{l:"yy",d:"year"}],l=h.length,m=0;m<l;m+=1){var c=h[m];c.d&&(d=i?n(t).diff(a,c.d,!0):a.diff(t,c.d,!0));var y=(r.rounding||Math.round)(Math.abs(d)),p=0<d;if(y<=c.r||!c.r){var v=f[(c=y<=1&&0<m?h[m-1]:c).l];u&&(y=u(""+y)),s="string"==typeof v?v.replace("%d",y):v(y,e,c.l,p);break}}if(e)return s;var M=p?f.future:f.past;return"function"==typeof M?M(s):M.replace("%s",s)},e.to=function(r,t){return a(r,t,this,!0)},e.from=function(r,t){return a(r,t,this)},e.toNow=function(r){return this.to(i(this),r)},e.fromNow=function(r){return this.from(i(this),r)}}}();
+dayjs.extend(globalThis.p_relativeTime)
+
+//  weekday plugin
+globalThis.p_weekday=function(){"use strict";return function(t,e){e.prototype.weekday=function(t){var e=this.$locale().weekStart||0,a=this.$W;return e=(a<e?a+7:a)-e,this.$utils().u(t)?e:this.subtract(e,"day").add(t,"day")}}}();
+dayjs.extend(globalThis.p_weekday)
+
+//  dayofyear plugin
+globalThis.p_dayOfYear=function(){"use strict";return function(t,a){a.prototype.dayOfYear=function(t){var a=Math.round((this.startOf("day")-this.startOf("year"))/864e5)+1;return null==t?a:this.add(t-a,"day")}}}();
+dayjs.extend(globalThis.p_dayOfYear)
+
+//  weekofyear plugin
+globalThis.p_weekOfYear=function(){"use strict";var t="week",e="year";return function(i,r,s){(r=r.prototype).week=function(i){if(null!==(i=void 0===i?null:i))return this.add(7*(i-this.week()),"day");var r=this.$locale().yearStart||1;if(11===this.month()&&25<this.date()){var a=s(this).startOf(e).add(1,e).date(r);if(i=s(this).endOf(t),a.isBefore(i))return 1}return r=s(this).startOf(e).date(r).startOf(t).subtract(1,"millisecond"),(r=this.diff(r,t,!0))<0?s(this).startOf("week").week():Math.ceil(r)},r.weeks=function(t){return this.week(t=void 0===t?null:t)}}}();
+dayjs.extend(globalThis.p_weekOfYear)
+
+// ====== common.js ======
 // MV3: colours only needed in UI contexts (popup, nap-room, rise), not in service worker
 var colours = (typeof window !== 'undefined' && window.gradientSteps) ? gradientSteps('#F3B845', '#DF4E76', 100) : [];
 function getBrowser() {
@@ -708,3 +729,231 @@ var showIconOnScroll = _ => {
 		if (!logo.classList.contains('hidden') && window.pageYOffset <= (header.offsetHeight + header.offsetTop)) logo.classList.add('hidden')
 	})
 }
+
+// ====== background.js ======
+chrome.runtime.onMessage.addListener(async msg => {
+	if (msg.logOptions) sendToLogs(msg.logOptions);
+	if (msg.wakeUp) await wakeUpTask();
+	// MV3: Remove setTimeout delay - execute immediately for service worker reliability
+	if (msg.close) {
+		if (msg.tabId) chrome.tabs.remove(msg.tabId);
+		if (msg.windowId) chrome.windows.remove(msg.windowId);
+		// MV3: Catch promise rejection when popup is not open
+		chrome.runtime.sendMessage({closePopup: true}).catch((e) => {
+			console.warn('[Snoozz] Could not send closePopup message (popup may not be open):', e.message);
+		});
+	}
+});
+chrome.storage.onChanged.addListener(async changes => {
+	if (changes.snoozedOptions) {
+		await setUpContextMenus(changes.snoozedOptions.newValue.contextMenu);
+		updateBadge(null, changes.snoozedOptions.newValue.badge);
+		if (changes.snoozedOptions.oldValue && changes.snoozedOptions.newValue.history !== changes.snoozedOptions.oldValue.history) await wakeUpTask();
+	}
+	if (changes.snoozed) {
+		await updateBadge(changes.snoozed.newValue);
+		await wakeUpTask(changes.snoozed.newValue);
+	}
+});
+
+if (chrome.notifications) chrome.notifications.onClicked.addListener(async id => {
+	await chrome.notifications.clear(id)
+	if (id === '_wakeUpNow') return await wakeUpTask();
+	var t = await getSnoozedTabs(id);
+	if (t && t.id && id && id.length) {
+		var found = t.tabs ? await findTabAnywhere(null, t.id) : await findTabAnywhere(t.url);
+		if (found && found.id && found.windowId) {
+			try {
+				await chrome.windows.update(found.windowId, {focused: true});
+				if (t.tabs) {
+					var winTabs = await getTabsInWindow();
+					await chrome.tabs.update(winTabs[0] && winTabs[0].id ? winTabs[0].id : found.id, {active: true});
+				} else {
+					await chrome.tabs.update(found.id, {active: true});
+				}
+				return;
+			} catch (e) {}
+		}
+	}
+	await openExtensionTab('html/nap-room.html');
+});
+
+async function wakeUpTask(cachedTabs) {
+	var tabs = cachedTabs || await getSnoozedTabs();
+	if (!tabs || !tabs.length || tabs.length === 0) return;
+	await cleanUpHistory(tabs);
+	if (sleeping(tabs).length === 0) {
+		bgLog(['No tabs are asleep'],['pink'], 'pink');
+		return chrome.alarms.clear('wakeUpTabs');
+	}
+	await setNextAlarm(tabs);
+}
+
+// MV3: Removed debounce variable - not reliable in service workers that can terminate
+async function setNextAlarm(tabs) {
+	var next = sleeping(tabs).filter(t => t.wakeUpTime && !t.paused);
+	next = next.length ? next.reduce((t1,t2) => t1.wakeUpTime < t2.wakeUpTime ? t1 : t2) : undefined;
+	if (!next) return;
+	if (next.wakeUpTime <= dayjs().valueOf()) {
+		// MV3: Wake immediately if already past wake time (no debounce delay)
+		// wakeMeUp processes all tabs that need waking, so no need to batch
+		await wakeMeUp(tabs);
+	} else {
+		var oneHour = dayjs().add(1, 'h').valueOf();
+		bgLog(['Next tab waking up:', next.id, 'at', dayjs(next.wakeUpTime).format('HH:mm:ss DD/MM/YY')],['','green','','yellow'])
+		await createAlarm(next.wakeUpTime < oneHour ? next.wakeUpTime : oneHour, next.wakeUpTime < oneHour);
+	}
+}
+
+async function wakeMeUp(tabs) {
+	var now = dayjs().valueOf();
+	var wakingUp = t => !t.paused && !t.opened && (t.url || (t.tabs && t.tabs.length && t.tabs.length > 0)) && t.wakeUpTime && t.wakeUpTime <= now;
+	var tabsToWakeUp = tabs.filter(wakingUp);
+	if (tabsToWakeUp.length === 0) return;
+	bgLog(['Waking up tabs', tabsToWakeUp.map(t => t.id).join(', ')], ['', 'green'], 'yellow');
+	tabs.filter(wakingUp).filter(t => !t.repeat).forEach(t => t.opened = now);
+	for (var s of tabs.filter(wakingUp).filter(t => t.repeat)) {
+		var next = await calculateNextSnoozeTime(s.repeat);
+		s.wakeUpTime = next.valueOf();
+	}
+	await saveTabs(tabs);
+
+	for (var s of tabsToWakeUp) s.tabs ? (s.selection ? await openSelection(s, true) : await openWindow(s, true)) : await openTab(s, null, true);
+}
+
+async function setUpContextMenus(cachedMenus) {
+	var cm = cachedMenus || await getOptions('contextMenu');
+	if (!cm || !cm.length || cm.length === 0) return;
+	var choices = await getChoices();
+	var contexts = getBrowser() === 'firefox' ? ['link', 'tab'] : ['link'];
+	if (cm.length === 1) {
+		await chrome.contextMenus.removeAll();
+		await chrome.contextMenus.create({
+			id: cm[0],
+			contexts: contexts,
+			title: `Snoozz ${choices[cm[0]].label.toLowerCase()}`,
+			documentUrlPatterns: ['<all_urls>'],
+			...(getBrowser() === 'firefox') ? {icons: {32: `../icons/${cm[0]}.png`}} : {}
+		});
+	} else {
+		await chrome.contextMenus.removeAll();
+		await chrome.contextMenus.create({id: 'snoozz', contexts: contexts, title: 'Snoozz', documentUrlPatterns: ['<all_urls>']})
+		for (var o of cm) await chrome.contextMenus.create({
+			parentId: 'snoozz',
+			id: o,
+			contexts: contexts,
+			title: choices[o].menuLabel,
+			...(getBrowser() === 'firefox') ? {icons: {32: `../icons/${o}.png`}} : {}
+		});
+	}
+	// MV3: Event listeners moved to top level (see below) to prevent duplicate registration
+}
+
+// MV3: Context menu event listeners at top level to prevent duplicate registration
+chrome.contextMenus.onClicked.addListener(snoozeInBackground);
+if (getBrowser() === 'firefox') chrome.contextMenus.onShown.addListener(contextMenuUpdater);
+
+if (chrome.commands) chrome.commands.onCommand.addListener(async (command, tab) => {
+	if (command === 'nap-room') return openExtensionTab('/html/nap-room.html');
+	tab = tab || await getTabsInWindow(true);
+	await snoozeInBackground({menuItemId: command, pageUrl: tab.url}, tab)
+})
+
+async function snoozeInBackground(item, tab) {
+	var c = await getChoices(item.menuItemId);
+	
+	var isHref = item.linkUrl && item.linkUrl.length;
+	var url = isHref ? item.linkUrl : item.pageUrl;
+	if(!isValid({url})) return createNotification(null, `Can't snoozz that :(`, 'icons/logo.svg', 'The link you are trying to snooze is invalid.', true);
+
+	var snoozeTime = c && c.time;
+	if (c && ['weekend', 'monday', 'week', 'month'].includes(item.menuItemId)) snoozeTime = await getTimeWithModifier(item.menuItemId);
+	if (!snoozeTime || c.disabled || dayjs().isAfter(dayjs(snoozeTime))) {
+		return createNotification(null, `Can't snoozz that :(`, 'icons/logo.svg', 'The time you have selected is invalid.', true);
+	}
+	// add attributes
+	var startUp = item.menuItemId === 'startup' ? true : undefined;
+	var title = !isHref ? tab.title : (item.linkText ? item.linkText : item.selectionText);
+	var wakeUpTime = snoozeTime.valueOf();
+	var pinned = !isHref && tab.pinned ? tab.pinned : undefined;
+	var assembledTab = Object.assign(item, {url, title, pinned, startUp, wakeUpTime})
+
+	var snoozed = await snoozeTab(item.menuItemId === 'startup' ? 'startup' : snoozeTime.valueOf(), assembledTab);
+	
+	var msg = `${!isHref ? tab.title : getHostname(url)} will wake up ${formatSnoozedUntil(assembledTab)}.`
+	createNotification(snoozed.tabDBId, 'A new tab is now napping :)', 'icons/logo.svg', msg, true);
+
+	if (!isHref) await chrome.tabs.remove(tab.id);
+	// MV3: Catch promise rejection when dashboard is not open
+	chrome.runtime.sendMessage({updateDash: true}).catch((e) => {
+		console.warn('[Snoozz] Could not send updateDash message (dashboard may not be open):', e.message);
+	});
+}
+
+async function contextMenuUpdater(menu) {
+	var choices = await getChoices();
+	for (c of menu.menuIds) {
+		if (choices[c]) await chrome.contextMenus.update(c, {enabled: !choices[c].disabled});
+	}
+	await chrome.contextMenus.refresh();
+}
+
+async function cleanUpHistory(tabs) {
+	var h = await getOptions('history') || 365;
+	var tabsToDelete = tabs.filter(t => h && t.opened && dayjs().isAfter(dayjs(t.opened).add(h, 'd')));
+	if (tabsToDelete.length === 0) return;
+	bgLog(['Deleting old tabs automatically:',tabsToDelete.map(t => t.id)],['','red'], 'red')
+	await saveTabs(tabs.filter(t => !tabsToDelete.includes(t)));
+}
+
+async function setUpExtension() {
+	var snoozed = await getSnoozedTabs();
+	if (!snoozed || !snoozed.length || snoozed.length === 0) await saveTabs([]);
+	var options = await getOptions();
+	options = Object.assign(DEFAULT_OPTIONS, options);
+	options = upgradeSettings(options);
+	await saveOptions(options);
+	await init();
+}
+function sendToLogs([which, p1]) {
+	try {
+		if (['tab', 'window', 'group', 'selection'].includes(which)) bgLog(['Snoozing a new ' + which, p1.id, 'till', dayjs(p1.wakeUpTime).format('HH:mm:ss DD/MM/YY')],['', 'green', '', 'yellow'],'green')
+		if (which === 'history') bgLog(['Sending tabs to history:', p1.join(', ')], ['', 'green'], 'blue');
+		if (which === 'manually') bgLog(['Waking up tabs manually:', p1.join(', ')], ['', 'green'], 'blue');
+		if (which === 'delete') bgLog(['Deleting tabs manually:', p1.join(', ')], ['', 'red'], 'red');
+	} catch (e) {console.log('logError', e, which, p1)}
+}
+
+async function init() {
+	var allTabs = await getSnoozedTabs();
+	if (allTabs && allTabs.length && allTabs.some(t => (t.startUp || (t.repeat && t.repeat.type === 'startup')) && !t.opened)) {
+		allTabs.filter(t => (t.startUp || (t.repeat && t.repeat.type === 'startup')) && !t.opened).forEach(t => t.wakeUpTime = dayjs().subtract(10, 's').valueOf());
+		await saveTabs(allTabs);
+	}
+	await wakeUpTask();
+	await setUpContextMenus();
+}
+
+chrome.runtime.onInstalled.addListener(async details => {
+	// MV3: Must await async initialization to ensure it completes before service worker terminates
+	await setUpExtension();
+	if (chrome.runtime.setUninstallURL) chrome.runtime.setUninstallURL('https://snoozz.me/bye');
+	if (details && details.reason && details.reason == 'install') await new Promise(r => chrome.tabs.create({url: 'https://rohan.xyz', active: true}, r));
+	if (details && details.reason && details.reason == 'update' && details.previousVersion && details.previousVersion != chrome.runtime.getManifest().version) {
+		if (chrome.runtime.getManifest().version.search(/^\d{1,3}(\.\d{1,3}){1,2}$/) !== 0) return;		// skip if minor version
+		await new Promise(r => chrome.storage.local.set({'updated': true}, r));
+		if (chrome.notifications) createNotification(null, 'Snoozz has been updated', 'icons/logo.svg', 'Click here to see what\'s new.', true);
+	}
+});
+chrome.runtime.onStartup.addListener(init);
+chrome.alarms.onAlarm.addListener(async a => { if (a.name === 'wakeUpTabs') await wakeUpTask()});
+if (chrome.idle) chrome.idle.onStateChanged.addListener(async s => {
+	if (s === 'active' || getBrowser() === 'firefox') {
+		if (navigator && navigator.onLine === false) {
+			// MV3: Use self instead of window in service worker context
+			self.addEventListener('online', async _ => {await wakeUpTask()}, {once: true});
+		} else {
+			await wakeUpTask();
+		}
+	}
+});

@@ -1,11 +1,15 @@
 chrome.runtime.onMessage.addListener(async msg => {
 	if (msg.logOptions) sendToLogs(msg.logOptions);
 	if (msg.wakeUp) await wakeUpTask();
-	if (msg.close) setTimeout(_ => {
+	// MV3: Remove setTimeout delay - execute immediately for service worker reliability
+	if (msg.close) {
 		if (msg.tabId) chrome.tabs.remove(msg.tabId);
 		if (msg.windowId) chrome.windows.remove(msg.windowId);
-		chrome.runtime.sendMessage({closePopup: true});
-	}, msg.delay || 2000);
+		// MV3: Catch promise rejection when popup is not open
+		chrome.runtime.sendMessage({closePopup: true}).catch((e) => {
+			console.warn('[Snoozz] Could not send closePopup message (popup may not be open):', e.message);
+		});
+	}
 });
 chrome.storage.onChanged.addListener(async changes => {
 	if (changes.snoozedOptions) {
@@ -52,14 +56,15 @@ async function wakeUpTask(cachedTabs) {
 	await setNextAlarm(tabs);
 }
 
-var debounce;
+// MV3: Removed debounce variable - not reliable in service workers that can terminate
 async function setNextAlarm(tabs) {
 	var next = sleeping(tabs).filter(t => t.wakeUpTime && !t.paused);
 	next = next.length ? next.reduce((t1,t2) => t1.wakeUpTime < t2.wakeUpTime ? t1 : t2) : undefined;
 	if (!next) return;
 	if (next.wakeUpTime <= dayjs().valueOf()) {
-		clearTimeout(debounce)
-		debounce = setTimeout(_ => wakeMeUp(tabs), 3000)
+		// MV3: Wake immediately if already past wake time (no debounce delay)
+		// wakeMeUp processes all tabs that need waking, so no need to batch
+		await wakeMeUp(tabs);
 	} else {
 		var oneHour = dayjs().add(1, 'h').valueOf();
 		bgLog(['Next tab waking up:', next.id, 'at', dayjs(next.wakeUpTime).format('HH:mm:ss DD/MM/YY')],['','green','','yellow'])
@@ -91,9 +96,9 @@ async function setUpContextMenus(cachedMenus) {
 	if (cm.length === 1) {
 		await chrome.contextMenus.removeAll();
 		await chrome.contextMenus.create({
-			id: cm[0], 
-			contexts: contexts, 
-			title: `Snoozz ${choices[cm[0]].label.toLowerCase()}`, 
+			id: cm[0],
+			contexts: contexts,
+			title: `Snoozz ${choices[cm[0]].label.toLowerCase()}`,
 			documentUrlPatterns: ['<all_urls>'],
 			...(getBrowser() === 'firefox') ? {icons: {32: `../icons/${cm[0]}.png`}} : {}
 		});
@@ -102,15 +107,19 @@ async function setUpContextMenus(cachedMenus) {
 		await chrome.contextMenus.create({id: 'snoozz', contexts: contexts, title: 'Snoozz', documentUrlPatterns: ['<all_urls>']})
 		for (var o of cm) await chrome.contextMenus.create({
 			parentId: 'snoozz',
-			id: o, 
+			id: o,
 			contexts: contexts,
 			title: choices[o].menuLabel,
 			...(getBrowser() === 'firefox') ? {icons: {32: `../icons/${o}.png`}} : {}
 		});
 	}
-	chrome.contextMenus.onClicked.addListener(snoozeInBackground);
-	if (getBrowser() === 'firefox') chrome.contextMenus.onShown.addListener(contextMenuUpdater);
+	// MV3: Event listeners moved to top level (see below) to prevent duplicate registration
 }
+
+// MV3: Context menu event listeners at top level to prevent duplicate registration
+chrome.contextMenus.onClicked.addListener(snoozeInBackground);
+if (getBrowser() === 'firefox') chrome.contextMenus.onShown.addListener(contextMenuUpdater);
+
 if (chrome.commands) chrome.commands.onCommand.addListener(async (command, tab) => {
 	if (command === 'nap-room') return openExtensionTab('/html/nap-room.html');
 	tab = tab || await getTabsInWindow(true);
@@ -142,7 +151,10 @@ async function snoozeInBackground(item, tab) {
 	createNotification(snoozed.tabDBId, 'A new tab is now napping :)', 'icons/logo.svg', msg, true);
 
 	if (!isHref) await chrome.tabs.remove(tab.id);
-	await chrome.runtime.sendMessage({updateDash: true});
+	// MV3: Catch promise rejection when dashboard is not open
+	chrome.runtime.sendMessage({updateDash: true}).catch((e) => {
+		console.warn('[Snoozz] Could not send updateDash message (dashboard may not be open):', e.message);
+	});
 }
 
 async function contextMenuUpdater(menu) {
@@ -190,7 +202,8 @@ async function init() {
 }
 
 chrome.runtime.onInstalled.addListener(async details => {
-	setUpExtension();
+	// MV3: Must await async initialization to ensure it completes before service worker terminates
+	await setUpExtension();
 	if (chrome.runtime.setUninstallURL) chrome.runtime.setUninstallURL('https://snoozz.me/bye');
 	if (details && details.reason && details.reason == 'install') await new Promise(r => chrome.tabs.create({url: 'https://rohan.xyz', active: true}, r));
 	if (details && details.reason && details.reason == 'update' && details.previousVersion && details.previousVersion != chrome.runtime.getManifest().version) {
@@ -204,9 +217,10 @@ chrome.alarms.onAlarm.addListener(async a => { if (a.name === 'wakeUpTabs') awai
 if (chrome.idle) chrome.idle.onStateChanged.addListener(async s => {
 	if (s === 'active' || getBrowser() === 'firefox') {
 		if (navigator && navigator.onLine === false) {
-			window.addEventListener('online', async _ => {await wakeUpTask()}, {once: true});
+			// MV3: Use self instead of window in service worker context
+			self.addEventListener('online', async _ => {await wakeUpTask()}, {once: true});
 		} else {
-			await wakeUpTask();	
+			await wakeUpTask();
 		}
 	}
 });
