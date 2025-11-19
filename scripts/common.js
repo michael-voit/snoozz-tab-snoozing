@@ -178,7 +178,7 @@ async function openTab(tab, windowId, automatic = false) {
 	}
 	if (!automatic) return;
 	var msg = `${tab.title} -- snoozed ${dayjs(tab.timeCreated).fromNow()}`;
-	createNotification(tab.id, 'A tab woke up!', 'icons/logo.svg', msg);
+	createNotification(tab.id, 'A tab woke up!', 'icons/ext-icon-128.png', msg);
 }
 
 async function openSelection(t, automatic = false) {
@@ -190,7 +190,7 @@ async function openSelection(t, automatic = false) {
 	for (var s of t.tabs) await openTab(s, targetWindowID);
 	if (!automatic) return;
 	var msg = `These tabs were put to sleep ${dayjs(t.timeCreated).fromNow()}`;
-	createNotification(t.id, `${t.title.split(' ')[0]} tabs woke up!`, 'icons/logo.svg', msg);
+	createNotification(t.id, `${t.title.split(' ')[0]} tabs woke up!`, 'icons/ext-icon-128.png', msg);
 }
 
 async function openWindow(t, automatic = false) {
@@ -218,7 +218,7 @@ async function openWindow(t, automatic = false) {
 	
 	if (!automatic) return;
 	var msg = `This window was put to sleep ${dayjs(t.timeCreated).fromNow()}`;
-	createNotification(t.id, 'A window woke up!', 'icons/logo.svg', msg);
+	createNotification(t.id, 'A window woke up!', 'icons/ext-icon-128.png', msg);
 	return;
 }
 
@@ -520,9 +520,7 @@ async function calculateNextSnoozeTime(data) {
 /* END ASYNC FUNCTIONS */
 var getFaviconUrl = url => {
 	if (url.indexOf('file://') === 0) return '../icons/file.svg'
-	// return `https://icons.duckduckgo.com/ip3/${getHostname(url)}.ico`
-	// return `https://www.google.com/s2/favicons?sz=64&domain_url=${getHostname(url)}`;
-	return `https://besticon.herokuapp.com/icon?url=${getHostname(url)}&size=32..48..64&fallback_icon_color=${getColorForUrl(getHostname(url)).replace('#', '')}`;
+	return `https://www.google.com/s2/favicons?domain=${getHostname(url)}&sz=64`;
 }
 var getColorForUrl = (url = 'snoozz.me') => colours[url.split('').map(c => c.charCodeAt(0)).reduce((a, b) => a + b) % 100];
 

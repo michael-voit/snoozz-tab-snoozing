@@ -131,12 +131,12 @@ async function snoozeInBackground(item, tab) {
 	
 	var isHref = item.linkUrl && item.linkUrl.length;
 	var url = isHref ? item.linkUrl : item.pageUrl;
-	if(!isValid({url})) return createNotification(null, `Can't snoozz that :(`, 'icons/logo.svg', 'The link you are trying to snooze is invalid.', true);
+	if(!isValid({url})) return createNotification(null, `Can't snoozz that :(`, 'icons/ext-icon-128.png', 'The link you are trying to snooze is invalid.', true);
 
 	var snoozeTime = c && c.time;
 	if (c && ['weekend', 'monday', 'week', 'month'].includes(item.menuItemId)) snoozeTime = await getTimeWithModifier(item.menuItemId);
 	if (!snoozeTime || c.disabled || dayjs().isAfter(dayjs(snoozeTime))) {
-		return createNotification(null, `Can't snoozz that :(`, 'icons/logo.svg', 'The time you have selected is invalid.', true);
+		return createNotification(null, `Can't snoozz that :(`, 'icons/ext-icon-128.png', 'The time you have selected is invalid.', true);
 	}
 	// add attributes
 	var startUp = item.menuItemId === 'startup' ? true : undefined;
@@ -148,7 +148,7 @@ async function snoozeInBackground(item, tab) {
 	var snoozed = await snoozeTab(item.menuItemId === 'startup' ? 'startup' : snoozeTime.valueOf(), assembledTab);
 	
 	var msg = `${!isHref ? tab.title : getHostname(url)} will wake up ${formatSnoozedUntil(assembledTab)}.`
-	createNotification(snoozed.tabDBId, 'A new tab is now napping :)', 'icons/logo.svg', msg, true);
+	createNotification(snoozed.tabDBId, 'A new tab is now napping :)', 'icons/ext-icon-128.png', msg, true);
 
 	if (!isHref) await chrome.tabs.remove(tab.id);
 	// MV3: Catch promise rejection when dashboard is not open
@@ -209,7 +209,7 @@ chrome.runtime.onInstalled.addListener(async details => {
 	if (details && details.reason && details.reason == 'update' && details.previousVersion && details.previousVersion != chrome.runtime.getManifest().version) {
 		if (chrome.runtime.getManifest().version.search(/^\d{1,3}(\.\d{1,3}){1,2}$/) !== 0) return;		// skip if minor version
 		await new Promise(r => chrome.storage.local.set({'updated': true}, r));
-		if (chrome.notifications) createNotification(null, 'Snoozz has been updated', 'icons/logo.svg', 'Click here to see what\'s new.', true);
+		if (chrome.notifications) createNotification(null, 'Snoozz has been updated', 'icons/ext-icon-128.png', 'Click here to see what\'s new.', true);
 	}
 });
 chrome.runtime.onStartup.addListener(init);

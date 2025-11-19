@@ -44,7 +44,7 @@ async function getOptions(keys) {
 	if (!keys) return p.snoozedOptions;
 	if (typeof keys === 'string') return p.snoozedOptions[keys];
 	return Object.keys(p.snoozedOptions).filter(k => keys.includes(k)).reduce((o, k) => {o[k] = p.snoozedOptions[k];return o},{});
-	
+
 }
 async function getTabsInWindow(active) {
 	if (getBrowser() === 'safari') active = true;
@@ -60,7 +60,7 @@ async function getTabId(url) {
 	var tabsInWindow = await getTabsInWindow();
 	if (!tabsInWindow.length) tabsInWindow = [tabsInWindow];
 	var foundTab  = tabsInWindow.find(t => t.url === url);
-	return foundTab ? parseInt(foundTab.id) : false; 
+	return foundTab ? parseInt(foundTab.id) : false;
 }
 async function findTabAnywhere(url, tabDBId) {
 	var wins = await getAllWindows(), found = false;
@@ -179,7 +179,7 @@ async function openExtensionTab(url) {
 	else if (extTabs.length > 1) {
 		var activeTab = extTabs.some(et => et.active) ? extTabs.find(et => et.active) : extTabs.reduce((t1, t2) => t1.index > t2.index ? t1 : t2);
 		chrome.tabs.update(activeTab.id, {url, active: true});
-		chrome.tabs.remove(extTabs.filter(et => et !== activeTab).map(t => t.id))		
+		chrome.tabs.remove(extTabs.filter(et => et !== activeTab).map(t => t.id))
 	} else {
 		var activeTab = tabs.find(t => t.active);
 		if (activeTab && ['New Tab', 'Start Page'].includes(activeTab.title)) {chrome.tabs.update(activeTab.id, {url})}
@@ -195,11 +195,11 @@ async function openTab(tab, windowId, automatic = false) {
 	} else if (!windows || !windows.filter(w => !w.incognito).length) {
 		await new Promise(r => chrome.windows.create({url: tab.url}, r));
 	} else {
-		await new Promise(r => chrome.tabs.create({url: tab.url, active: false, pinned: tab.pinned, windowId}, r));	
+		await new Promise(r => chrome.tabs.create({url: tab.url, active: false, pinned: tab.pinned, windowId}, r));
 	}
 	if (!automatic) return;
 	var msg = `${tab.title} -- snoozed ${dayjs(tab.timeCreated).fromNow()}`;
-	createNotification(tab.id, 'A tab woke up!', 'icons/logo.svg', msg);
+	createNotification(tab.id, 'A tab woke up!', 'icons/ext-icon-128.png', msg);
 }
 
 async function openSelection(t, automatic = false) {
@@ -211,7 +211,7 @@ async function openSelection(t, automatic = false) {
 	for (var s of t.tabs) await openTab(s, targetWindowID);
 	if (!automatic) return;
 	var msg = `These tabs were put to sleep ${dayjs(t.timeCreated).fromNow()}`;
-	createNotification(t.id, `${t.title.split(' ')[0]} tabs woke up!`, 'icons/logo.svg', msg);
+	createNotification(t.id, `${t.title.split(' ')[0]} tabs woke up!`, 'icons/ext-icon-128.png', msg);
 }
 
 async function openWindow(t, automatic = false) {
@@ -236,10 +236,10 @@ async function openWindow(t, automatic = false) {
 
 	for (var s of t.tabs) await openTab(s, targetWindowID);
 	chrome.windows.update(targetWindowID, {focused: true});
-	
+
 	if (!automatic) return;
 	var msg = `This window was put to sleep ${dayjs(t.timeCreated).fromNow()}`;
-	createNotification(t.id, 'A window woke up!', 'icons/logo.svg', msg);
+	createNotification(t.id, 'A window woke up!', 'icons/ext-icon-128.png', msg);
 	return;
 }
 
@@ -328,7 +328,7 @@ async function snoozeWindow(snoozeTime, isASelection) {
 		}))
 	});
 	await saveTab(sleepyGroup);
-	chrome.runtime.sendMessage({logOptions: [isASelection ? 'selection' : 'window', sleepyGroup, snoozeTime]});	
+	chrome.runtime.sendMessage({logOptions: [isASelection ? 'selection' : 'window', sleepyGroup, snoozeTime]});
 	return isASelection ? {tabId: tabsInWindow.filter(t => t.highlighted).map(t => t.id)} : {windowId: tabsInWindow.find(w => w.active).windowId};
 }
 
@@ -541,9 +541,7 @@ async function calculateNextSnoozeTime(data) {
 /* END ASYNC FUNCTIONS */
 var getFaviconUrl = url => {
 	if (url.indexOf('file://') === 0) return '../icons/file.svg'
-	// return `https://icons.duckduckgo.com/ip3/${getHostname(url)}.ico`
-	// return `https://www.google.com/s2/favicons?sz=64&domain_url=${getHostname(url)}`;
-	return `https://besticon.herokuapp.com/icon?url=${getHostname(url)}&size=32..48..64&fallback_icon_color=${getColorForUrl(getHostname(url)).replace('#', '')}`;
+	return `https://www.google.com/s2/favicons?domain=${getHostname(url)}&sz=64`;
 }
 var getColorForUrl = (url = 'snoozz.me') => colours[url.split('').map(c => c.charCodeAt(0)).reduce((a, b) => a + b) % 100];
 
@@ -696,7 +694,7 @@ var resizeDropdowns = _ => {
 
 var getUrlParam = p => {
 	var url = new URLSearchParams(window.location.search);
-	return url.get(p); 
+	return url.get(p);
 }
 
 var upgradeSettings = settings => {
@@ -861,15 +859,15 @@ if (chrome.commands) chrome.commands.onCommand.addListener(async (command, tab) 
 
 async function snoozeInBackground(item, tab) {
 	var c = await getChoices(item.menuItemId);
-	
+
 	var isHref = item.linkUrl && item.linkUrl.length;
 	var url = isHref ? item.linkUrl : item.pageUrl;
-	if(!isValid({url})) return createNotification(null, `Can't snoozz that :(`, 'icons/logo.svg', 'The link you are trying to snooze is invalid.', true);
+	if(!isValid({url})) return createNotification(null, `Can't snoozz that :(`, 'icons/ext-icon-128.png', 'The link you are trying to snooze is invalid.', true);
 
 	var snoozeTime = c && c.time;
 	if (c && ['weekend', 'monday', 'week', 'month'].includes(item.menuItemId)) snoozeTime = await getTimeWithModifier(item.menuItemId);
 	if (!snoozeTime || c.disabled || dayjs().isAfter(dayjs(snoozeTime))) {
-		return createNotification(null, `Can't snoozz that :(`, 'icons/logo.svg', 'The time you have selected is invalid.', true);
+		return createNotification(null, `Can't snoozz that :(`, 'icons/ext-icon-128.png', 'The time you have selected is invalid.', true);
 	}
 	// add attributes
 	var startUp = item.menuItemId === 'startup' ? true : undefined;
@@ -879,9 +877,9 @@ async function snoozeInBackground(item, tab) {
 	var assembledTab = Object.assign(item, {url, title, pinned, startUp, wakeUpTime})
 
 	var snoozed = await snoozeTab(item.menuItemId === 'startup' ? 'startup' : snoozeTime.valueOf(), assembledTab);
-	
+
 	var msg = `${!isHref ? tab.title : getHostname(url)} will wake up ${formatSnoozedUntil(assembledTab)}.`
-	createNotification(snoozed.tabDBId, 'A new tab is now napping :)', 'icons/logo.svg', msg, true);
+	createNotification(snoozed.tabDBId, 'A new tab is now napping :)', 'icons/ext-icon-128.png', msg, true);
 
 	if (!isHref) await chrome.tabs.remove(tab.id);
 	// MV3: Catch promise rejection when dashboard is not open
@@ -942,7 +940,7 @@ chrome.runtime.onInstalled.addListener(async details => {
 	if (details && details.reason && details.reason == 'update' && details.previousVersion && details.previousVersion != chrome.runtime.getManifest().version) {
 		if (chrome.runtime.getManifest().version.search(/^\d{1,3}(\.\d{1,3}){1,2}$/) !== 0) return;		// skip if minor version
 		await new Promise(r => chrome.storage.local.set({'updated': true}, r));
-		if (chrome.notifications) createNotification(null, 'Snoozz has been updated', 'icons/logo.svg', 'Click here to see what\'s new.', true);
+		if (chrome.notifications) createNotification(null, 'Snoozz has been updated', 'icons/ext-icon-128.png', 'Click here to see what\'s new.', true);
 	}
 });
 chrome.runtime.onStartup.addListener(init);
