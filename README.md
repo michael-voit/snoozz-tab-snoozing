@@ -32,6 +32,8 @@
 
 A Web Extension to *snoozz* tabs and windows now and have them reopen automatically later.
 
+**Current Version**: 3.0.0 (Manifest V3 for Chrome/Edge, Manifest V2 for Firefox/Safari)
+
 Check out the [Snoozz.me](https://snoozz.me) website for more features, screenshots, demo gifs, and the privacy policy (spoiler: nothing is tracked)
 
 Features:
@@ -49,6 +51,33 @@ Available on [Chrome](https://chrome.google.com/webstore/detail/snoozz-snooze-ta
 
 Related repos: [Snoozz Website](https://github.com/rohanb10/snoozz-web) | [Snoozz Stats](https://github.com/rohanb10/snoozz-stats)
 
+## Building from Source
+
+### Prerequisites
+- Node.js and npm
+- Python 3
+
+### Build Commands
+
+```bash
+# Install dependencies
+npm install
+
+# Build for production (creates all 4 platform packages)
+python3 build.py
+```
+
+This creates:
+- `snoozz-chrome-mv3-{VERSION}.zip` - Chrome/Edge (Manifest V3)
+- `snoozz-ff-{VERSION}.zip` - Firefox (Manifest V2)
+- `snoozz-{VERSION}.zip` - GitHub release
+- `snoozz-safari-{VERSION}.zip` - Safari (requires additional setup)
+
+### Development
+
+For rapid testing during development:
+- Chrome/Edge: Load `test-mv3-extension/` as unpacked extension
+- Firefox: Load extension root directory in about:debugging
 
 ## Colours
 
