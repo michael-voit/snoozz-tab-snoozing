@@ -524,12 +524,22 @@ async function initializeExpandos() {
 
 async function wakeUpTabsAbruptly(ids) {
 	if (!ids) return;
-	CACHED_TABS.filter(t => ids.includes(t.id) && !t.repeat).forEach(t => t.opened = dayjs().valueOf())
+	var now = dayjs().valueOf();
+
+	var tabsToWake = CACHED_TABS.filter(n => ids.includes(n.id));
+	tabsToWake.forEach(t => t.openingAttempted = now);
+	CACHED_TABS.filter(t => ids.includes(t.id) && !t.repeat).forEach(t => t.opened = now);
+
 	chrome.runtime.sendMessage({logOptions: ['manually', ids]});
 	await saveTabs(CACHED_TABS);
-	for (var t of CACHED_TABS.filter(n => ids.includes(n.id))) {
+
+	for (var t of tabsToWake) {
 		t.tabs && t.tabs.length ? (t.selection ? await openSelection(t) : await openWindow(t)) : await openTab(t);
 	}
+
+	tabsToWake.forEach(t => delete t.openingAttempted);
+	await saveTabs(CACHED_TABS);
+
 	updateTimeGroups();
 }
 

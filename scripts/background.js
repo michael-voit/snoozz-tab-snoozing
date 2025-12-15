@@ -167,6 +167,19 @@ async function contextMenuUpdater(menu) {
 
 async function cleanUpHistory(tabs) {
 	var h = await getOptions('history') || 365;
+	var now = dayjs().valueOf();
+
+	// Remove orphaned opening timestamps (e.g. from service worker termination or completed wake-ups)
+	var STALE_THRESHOLD_MS = 15000; // 15 seconds - enough time for windows to open completely
+	var tabsWithStaleTimestamps = tabs.filter(t =>
+		t.openingAttempted && (now - t.openingAttempted) > STALE_THRESHOLD_MS
+	);
+	if (tabsWithStaleTimestamps.length > 0) {
+		bgLog(['Cleaning stale openingAttempted timestamps:', tabsWithStaleTimestamps.map(t => t.id).join(', ')], ['', 'blue'], 'blue');
+		tabsWithStaleTimestamps.forEach(t => delete t.openingAttempted);
+		await saveTabs(tabs);
+	}
+
 	var tabsToDelete = tabs.filter(t => h && t.opened && dayjs().isAfter(dayjs(t.opened).add(h, 'd')));
 	if (tabsToDelete.length === 0) return;
 	bgLog(['Deleting old tabs automatically:',tabsToDelete.map(t => t.id)],['','red'], 'red')
@@ -176,6 +189,17 @@ async function cleanUpHistory(tabs) {
 async function setUpExtension() {
 	var snoozed = await getSnoozedTabs();
 	if (!snoozed || !snoozed.length || snoozed.length === 0) await saveTabs([]);
+
+	// Clean up any stale opening timestamps on startup
+	if (snoozed && snoozed.length > 0) {
+		var needsCleanup = snoozed.some(t => t.openingAttempted);
+		if (needsCleanup) {
+			bgLog(['Migrating data: removing openingAttempted timestamps'], [''], 'blue');
+			snoozed.forEach(t => delete t.openingAttempted);
+			await saveTabs(snoozed);
+		}
+	}
+
 	var options = await getOptions();
 	options = Object.assign(DEFAULT_OPTIONS, options);
 	options = upgradeSettings(options);
