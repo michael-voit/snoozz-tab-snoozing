@@ -14,14 +14,55 @@ chrome.runtime.onMessage.addListener(async msg => {
 chrome.storage.onChanged.addListener(async changes => {
 	if (changes.snoozedOptions) {
 		await setUpContextMenus(changes.snoozedOptions.newValue.contextMenu);
-		updateBadge(null, changes.snoozedOptions.newValue.badge);
+		var activeTab = await getTabsInWindow(true);
+		var tabId = activeTab && activeTab.id ? activeTab.id : null;
+		updateBadge(null, changes.snoozedOptions.newValue.badge, tabId);
 		if (changes.snoozedOptions.oldValue && changes.snoozedOptions.newValue.history !== changes.snoozedOptions.oldValue.history) await wakeUpTask();
 	}
 	if (changes.snoozed) {
-		await updateBadge(changes.snoozed.newValue);
+		var activeTab = await getTabsInWindow(true);
+		var tabId = activeTab && activeTab.id ? activeTab.id : null;
+		await updateBadge(changes.snoozed.newValue, null, tabId);
 		await wakeUpTask(changes.snoozed.newValue);
 	}
 });
+
+// Listen for tab activation to update badge color
+if (chrome.tabs && chrome.tabs.onActivated) {
+	chrome.tabs.onActivated.addListener(async activeInfo => {
+		var highlightEnabled = await getOptions('highlightSnoozedTab');
+		if (highlightEnabled === false) return;
+		var tabs = await getSnoozedTabs();
+		await updateBadge(tabs, null, activeInfo.tabId);
+	});
+}
+
+// Listen for tab updates (URL changes) to update badge color
+if (chrome.tabs && chrome.tabs.onUpdated) {
+	chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+		if (!changeInfo.url) return;
+		var highlightEnabled = await getOptions('highlightSnoozedTab');
+		if (highlightEnabled === false) return;
+		if (tab.active) {
+			var tabs = await getSnoozedTabs();
+			await updateBadge(tabs, null, tabId);
+		}
+	});
+}
+
+// Listen for window focus changes to update badge color
+if (chrome.windows && chrome.windows.onFocusChanged) {
+	chrome.windows.onFocusChanged.addListener(async windowId => {
+		if (windowId === chrome.windows.WINDOW_ID_NONE) return;
+		var highlightEnabled = await getOptions('highlightSnoozedTab');
+		if (highlightEnabled === false) return;
+		var activeTab = await getTabsInWindow(true);
+		if (activeTab && activeTab.id) {
+			var tabs = await getSnoozedTabs();
+			await updateBadge(tabs, null, activeTab.id);
+		}
+	});
+}
 
 if (chrome.notifications) chrome.notifications.onClicked.addListener(async id => {
 	await chrome.notifications.clear(id)
@@ -74,18 +115,44 @@ async function setNextAlarm(tabs) {
 
 async function wakeMeUp(tabs) {
 	var now = dayjs().valueOf();
-	var wakingUp = t => !t.paused && !t.opened && (t.url || (t.tabs && t.tabs.length && t.tabs.length > 0)) && t.wakeUpTime && t.wakeUpTime <= now;
+	var OPENING_WINDOW_MS = 15000; // Increased from 5s to 15s for windows that take longer to open
+
+	var wakingUp = t => {
+		if (t.opened) return false;
+		if (t.paused) return false;
+
+		// Skip if another concurrent wake-up is already processing this tab
+		if (t.openingAttempted && (now - t.openingAttempted) < OPENING_WINDOW_MS) {
+			bgLog(['Skipping tab (opening in progress):', t.id, 'attempted', dayjs().to(dayjs(t.openingAttempted))], ['', 'orange', '', 'orange'], 'orange');
+			return false;
+		}
+
+		if (!t.url && (!t.tabs || !t.tabs.length || t.tabs.length === 0)) return false;
+		if (!t.wakeUpTime || t.wakeUpTime > now) return false;
+		return true;
+	};
+
 	var tabsToWakeUp = tabs.filter(wakingUp);
 	if (tabsToWakeUp.length === 0) return;
+
 	bgLog(['Waking up tabs', tabsToWakeUp.map(t => t.id).join(', ')], ['', 'green'], 'yellow');
-	tabs.filter(wakingUp).filter(t => !t.repeat).forEach(t => t.opened = now);
-	for (var s of tabs.filter(wakingUp).filter(t => t.repeat)) {
+
+	// Mark opening attempt to prevent concurrent duplicates
+	tabsToWakeUp.forEach(t => t.openingAttempted = now);
+	tabs.filter(t => tabsToWakeUp.includes(t) && !t.repeat).forEach(t => t.opened = now);
+
+	for (var s of tabs.filter(t => tabsToWakeUp.includes(t) && t.repeat)) {
 		var next = await calculateNextSnoozeTime(s.repeat);
 		s.wakeUpTime = next.valueOf();
 	}
+
+	// Save with openingAttempted flag to prevent race condition
 	await saveTabs(tabs);
 
 	for (var s of tabsToWakeUp) s.tabs ? (s.selection ? await openSelection(s, true) : await openWindow(s, true)) : await openTab(s, null, true);
+
+	// Don't delete openingAttempted immediately - let cleanUpHistory handle stale timestamps
+	// This prevents race conditions where a second wakeUpTask reads tabs after we delete the flag but before saving
 }
 
 async function setUpContextMenus(cachedMenus) {

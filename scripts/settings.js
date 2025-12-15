@@ -52,7 +52,7 @@ function updateFormValues(storage) {
 	['weekend', 'monday', 'week', 'month'].forEach(po => {
 		document.querySelector(`#popup_${po}`).value = storage.popup && storage.popup[po] ? storage.popup[po] : (storage.timeOfDay || 'morning');
 	});
-	['history', 'icons', 'theme', 'notifications', 'badge', 'closeDelay', 'hourFormat', 'weekStart'].forEach(o => {
+	['history', 'icons', 'theme', 'notifications', 'badge', 'closeDelay', 'hourFormat', 'weekStart', 'highlightSnoozedTab'].forEach(o => {
 		if (storage[o] !== undefined && document.querySelector(`#${o} option[value="${storage[o]}"]`)) {
 			document.getElementById(o).value = storage[o].toString()
 			document.getElementById(o).setAttribute('data-orig-value', storage[o]);
@@ -121,7 +121,11 @@ Would you like to update ${tabsToChange.length > 1 ? 'them' : 'it'} to snooze ti
 			}
 		}
 	}
-	document.querySelectorAll('select.direct').forEach(s => options[s.id] = isNaN(s.value) ? s.value : parseInt(s.value));
+	document.querySelectorAll('select.direct').forEach(s => {
+		if (s.value === 'true') options[s.id] = true;
+		else if (s.value === 'false') options[s.id] = false;
+		else options[s.id] = isNaN(s.value) ? s.value : parseInt(s.value);
+	});
 	document.querySelectorAll('select.popup').forEach(p => options.popup[p.id.replace('popup_', '')] = p.value);
 	// handle morning evening time separately
 	['morning', 'evening'].forEach(o => options[o] = [parseInt(document.getElementById(`${o}_h`).value), parseInt(document.getElementById(`${o}_m`).value)]);

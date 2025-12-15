@@ -132,7 +132,7 @@ async function fetchHourFormat() {
 	HOUR_FORMAT = t && [24, 12].includes(t) ? t : 12;
 }
 
-async function updateBadge(cachedTabs, cachedBadge) {
+async function updateBadge(cachedTabs, cachedBadge, tabId) {
 	var num = 0;
 	var badge = cachedBadge || await getOptions('badge');
 	var tabs = cachedTabs || await getSnoozedTabs();
@@ -142,8 +142,39 @@ async function updateBadge(cachedTabs, cachedBadge) {
 	const actionAPI = chrome.action || chrome.browserAction;
 	// MV3: Safety check - APIs might not be ready during service worker initialization
 	if (!actionAPI) return;
+
+	// Determine badge color based on current tab
+	var badgeColor = '#0072BC'; // Default blue
+	var highlightEnabled = await getOptions('highlightSnoozedTab');
+
+	if (highlightEnabled !== false && tabId) { // undefined or true = enabled
+		try {
+			var currentTab = await new Promise((resolve, reject) => {
+				chrome.tabs.get(tabId, tab => {
+					if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+					else resolve(tab);
+				});
+			});
+			if (currentTab && currentTab.url && isTabSnoozed(currentTab.url, tabs)) {
+				badgeColor = '#F3B845'; // Orange when current tab is snoozed
+			}
+		} catch (e) {
+			// Tab might have been closed, ignore error
+		}
+	}
+
 	actionAPI.setBadgeText({text: num > 0 ? num.toString() : ''});
-	actionAPI.setBadgeBackgroundColor({color: '#0072BC'});
+	actionAPI.setBadgeBackgroundColor({color: badgeColor});
+}
+
+function isTabSnoozed(url, snoozedTabs) {
+	if (!url || !snoozedTabs || !snoozedTabs.length) return false;
+	var normalizedUrl = url.split('#')[0].replace(/\/$/, '');
+	return snoozedTabs.some(t => {
+		if (!t.url) return false;
+		var snoozedUrl = t.url.split('#')[0].replace(/\/$/, '');
+		return snoozedUrl === normalizedUrl;
+	});
 }
 
 /*	OPEN 	*/
@@ -611,6 +642,7 @@ const DEFAULT_OPTIONS = {
 	notifications: 'on',
 	history: 30,
 	badge: 'today',
+	highlightSnoozedTab: true,
 	closeDelay: 1000,
 	napCollapsed: [],
 	weekStart: 0,
