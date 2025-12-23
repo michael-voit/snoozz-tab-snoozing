@@ -761,6 +761,11 @@ var showIconOnScroll = _ => {
 }
 
 // ====== background.js ======
+let isInitializing = false;
+let initializationComplete = false;
+let lastWakeUpTaskCall = 0;
+const WAKE_UP_TASK_DEBOUNCE_MS = 500; // 500ms minimum between calls
+
 chrome.runtime.onMessage.addListener(async msg => {
 	if (msg.logOptions) sendToLogs(msg.logOptions);
 	if (msg.wakeUp) await wakeUpTask();
@@ -786,6 +791,12 @@ chrome.storage.onChanged.addListener(async changes => {
 		var activeTab = await getTabsInWindow(true);
 		var tabId = activeTab && activeTab.id ? activeTab.id : null;
 		await updateBadge(changes.snoozed.newValue, null, tabId);
+
+		if (isInitializing) {
+			bgLog(['Storage changed during initialization, skipping wakeUpTask'], [''], 'blue');
+			return;
+		}
+
 		await wakeUpTask(changes.snoozed.newValue);
 	}
 });
@@ -850,6 +861,16 @@ if (chrome.notifications) chrome.notifications.onClicked.addListener(async id =>
 });
 
 async function wakeUpTask(cachedTabs) {
+	var now = Date.now();
+	var timeSinceLastCall = now - lastWakeUpTaskCall;
+
+	if (!cachedTabs && timeSinceLastCall < WAKE_UP_TASK_DEBOUNCE_MS) {
+		bgLog(['wakeUpTask debounced (called', timeSinceLastCall, 'ms ago)'], ['', 'blue', ''], 'blue');
+		return;
+	}
+
+	lastWakeUpTaskCall = now;
+
 	var tabs = cachedTabs || await getSnoozedTabs();
 	if (!tabs || !tabs.length || tabs.length === 0) return;
 	await cleanUpHistory(tabs);
@@ -1046,18 +1067,45 @@ function sendToLogs([which, p1]) {
 }
 
 async function init() {
-	var allTabs = await getSnoozedTabs();
-	if (allTabs && allTabs.length && allTabs.some(t => (t.startUp || (t.repeat && t.repeat.type === 'startup')) && !t.opened)) {
-		allTabs.filter(t => (t.startUp || (t.repeat && t.repeat.type === 'startup')) && !t.opened).forEach(t => t.wakeUpTime = dayjs().subtract(10, 's').valueOf());
-		await saveTabs(allTabs);
+	// Prevent concurrent initialization
+	if (isInitializing) {
+		bgLog(['Init already in progress, skipping duplicate call'], [''], 'orange');
+		return;
 	}
-	await wakeUpTask();
-	await setUpContextMenus();
+
+	isInitializing = true;
+
+	try {
+		var allTabs = await getSnoozedTabs();
+		var contextMenuPromise = setUpContextMenus(); // Start in parallel
+
+		var startupTabs = allTabs && allTabs.length ?
+			allTabs.filter(t => (t.startUp || (t.repeat && t.repeat.type === 'startup')) && !t.opened) : [];
+
+		if (startupTabs.length > 0) {
+			bgLog(['Found startup tabs to wake:', startupTabs.map(t => t.id).join(', ')], ['', 'green'], 'green');
+			startupTabs.forEach(t => t.wakeUpTime = dayjs().subtract(10, 's').valueOf());
+			await saveTabs(allTabs);
+			// Call wakeUpTask immediately with the already-modified tabs (bypasses storage read)
+			await wakeUpTask(allTabs);
+		} else {
+			await wakeUpTask(allTabs);
+		}
+
+		await contextMenuPromise; // Wait for context menus
+		initializationComplete = true;
+		bgLog(['Initialization complete'], [''], 'green');
+	} finally {
+		isInitializing = false;
+	}
 }
 
 chrome.runtime.onInstalled.addListener(async details => {
 	// MV3: Must await async initialization to ensure it completes before service worker terminates
+	bgLog(['onInstalled fired:', details.reason], ['', 'yellow'], 'yellow');
 	await setUpExtension();
+	await init();
+
 	if (chrome.runtime.setUninstallURL) chrome.runtime.setUninstallURL('https://snoozz.me/bye');
 	if (details && details.reason && details.reason == 'install') await new Promise(r => chrome.tabs.create({url: 'https://rohan.xyz', active: true}, r));
 	if (details && details.reason && details.reason == 'update' && details.previousVersion && details.previousVersion != chrome.runtime.getManifest().version) {
@@ -1066,7 +1114,22 @@ chrome.runtime.onInstalled.addListener(async details => {
 		if (chrome.notifications) createNotification(null, 'Snoozz has been updated', 'icons/ext-icon-128.png', 'Click here to see what\'s new.', true);
 	}
 });
-chrome.runtime.onStartup.addListener(init);
+
+chrome.runtime.onStartup.addListener(async () => {
+	bgLog(['onStartup fired'], [''], 'yellow');
+	if (isInitializing) {
+		bgLog(['Waiting for onInstalled initialization to complete...'], [''], 'blue');
+		for (let i = 0; i < 50; i++) {
+			if (initializationComplete) {
+				bgLog(['Initialization already complete, skipping duplicate init'], [''], 'green');
+				return;
+			}
+			await new Promise(r => setTimeout(r, 100));
+		}
+		bgLog(['Timeout waiting for initialization, proceeding with init'], [''], 'orange');
+	}
+	await init();
+});
 chrome.alarms.onAlarm.addListener(async a => { if (a.name === 'wakeUpTabs') await wakeUpTask()});
 if (chrome.idle) chrome.idle.onStateChanged.addListener(async s => {
 	if (s === 'active' || getBrowser() === 'firefox') {
