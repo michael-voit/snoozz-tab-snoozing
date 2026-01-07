@@ -1,5 +1,11 @@
+// MV3: Track initialization state to prevent concurrent startup operations
 let isInitializing = false;
 let initializationComplete = false;
+
+// MV3: Track wake-up state to prevent concurrent wake-up operations
+let isWakingUp = false;
+
+// MV3: Simple debounce tracking (not persistent across service worker restarts)
 let lastWakeUpTaskCall = 0;
 const WAKE_UP_TASK_DEBOUNCE_MS = 500; // 500ms minimum between calls
 
@@ -28,8 +34,18 @@ chrome.storage.onChanged.addListener(async changes => {
 		var activeTab = await getTabsInWindow(true);
 		var tabId = activeTab && activeTab.id ? activeTab.id : null;
 		await updateBadge(changes.snoozed.newValue, null, tabId);
+
+		// Skip wakeUpTask during initialization to prevent duplicate wake-ups
+		// The init() function will handle wake-ups directly
 		if (isInitializing) {
 			bgLog(['Storage changed during initialization, skipping wakeUpTask'], [''], 'blue');
+			return;
+		}
+
+		// Skip wakeUpTask during wake-up to prevent duplicate wake-ups
+		// This prevents race conditions when cleanUpHistory() or wakeMeUp() save tabs
+		if (isWakingUp) {
+			bgLog(['Storage changed during wake-up, skipping wakeUpTask'], [''], 'orange');
 			return;
 		}
 
@@ -100,22 +116,45 @@ async function wakeUpTask(cachedTabs) {
 	var now = Date.now();
 	var timeSinceLastCall = now - lastWakeUpTaskCall;
 
+	bgLog(['>>> wakeUpTask() called', cachedTabs ? '(with cached tabs)' : '(reading from storage)'], ['', 'blue'], 'cyan');
+
+	// Check if already waking up - block ALL calls including cached tabs
+	// This prevents race condition when storage.onChanged fires during cleanUpHistory
+	if (isWakingUp) {
+		bgLog(['wakeUpTask: Already waking up, skipping duplicate call' + (cachedTabs ? ' (cached tabs ignored)' : '')], [''], 'orange');
+		return;
+	}
+
 	// Debounce rapid-fire calls (but allow explicit cached tabs to bypass)
 	if (!cachedTabs && timeSinceLastCall < WAKE_UP_TASK_DEBOUNCE_MS) {
 		bgLog(['wakeUpTask debounced (called', timeSinceLastCall, 'ms ago)'], ['', 'blue', ''], 'blue');
 		return;
 	}
 
-	lastWakeUpTaskCall = now;
-
-	var tabs = cachedTabs || await getSnoozedTabs();
-	if (!tabs || !tabs.length || tabs.length === 0) return;
-	await cleanUpHistory(tabs);
-	if (sleeping(tabs).length === 0) {
-		bgLog(['No tabs are asleep'],['pink'], 'pink');
-		return chrome.alarms.clear('wakeUpTabs');
+	// Set lock BEFORE any operations that might trigger storage changes
+	if (!cachedTabs) {
+		isWakingUp = true;
+		bgLog(['wakeUpTask: Setting isWakingUp lock'], [''], 'magenta');
 	}
-	await setNextAlarm(tabs);
+
+	try {
+		lastWakeUpTaskCall = now;
+
+		var tabs = cachedTabs || await getSnoozedTabs();
+		if (!tabs || !tabs.length || tabs.length === 0) return;
+		await cleanUpHistory(tabs);
+		if (sleeping(tabs).length === 0) {
+			bgLog(['No tabs are asleep'],['pink'], 'pink');
+			return chrome.alarms.clear('wakeUpTabs');
+		}
+		await setNextAlarm(tabs);
+		bgLog(['<<< wakeUpTask() finished'], [''], 'cyan');
+	} finally {
+		if (!cachedTabs) {
+			isWakingUp = false;
+			bgLog(['wakeUpTask: Released isWakingUp lock'], [''], 'magenta');
+		}
+	}
 }
 
 // MV3: Removed debounce variable - not reliable in service workers that can terminate
@@ -138,6 +177,8 @@ async function wakeMeUp(tabs) {
 	var now = dayjs().valueOf();
 	var OPENING_WINDOW_MS = 15000; // Increased from 5s to 15s for windows that take longer to open
 
+	bgLog(['=== wakeMeUp() CALLED ==='], [''], 'magenta');
+
 	var wakingUp = t => {
 		if (t.opened) return false;
 		if (t.paused) return false;
@@ -154,9 +195,19 @@ async function wakeMeUp(tabs) {
 	};
 
 	var tabsToWakeUp = tabs.filter(wakingUp);
-	if (tabsToWakeUp.length === 0) return;
+	if (tabsToWakeUp.length === 0) {
+		bgLog(['wakeMeUp: No tabs to wake up'], [''], 'grey');
+		return;
+	}
 
 	bgLog(['Waking up tabs', tabsToWakeUp.map(t => t.id).join(', ')], ['', 'green'], 'yellow');
+
+	// Log details about each tab being woken up
+	for (var t of tabsToWakeUp) {
+		var type = t.tabs ? (t.selection ? 'selection' : 'window') : 'tab';
+		var tabCount = t.tabs ? t.tabs.length : 1;
+		bgLog(['  → Opening', type, t.id, 'with', tabCount, 'tab(s)'], ['', 'yellow', 'green', '', 'yellow', ''], 'grey');
+	}
 
 	// Mark opening attempt to prevent concurrent duplicates
 	tabsToWakeUp.forEach(t => t.openingAttempted = now);
@@ -171,6 +222,8 @@ async function wakeMeUp(tabs) {
 	await saveTabs(tabs);
 
 	for (var s of tabsToWakeUp) s.tabs ? (s.selection ? await openSelection(s, true) : await openWindow(s, true)) : await openTab(s, null, true);
+
+	bgLog(['=== wakeMeUp() FINISHED ==='], [''], 'magenta');
 
 	// Don't delete openingAttempted immediately - let cleanUpHistory handle stale timestamps
 	// This prevents race conditions where a second wakeUpTask reads tabs after we delete the flag but before saving
@@ -304,6 +357,8 @@ function sendToLogs([which, p1]) {
 }
 
 async function init() {
+	bgLog(['### INIT() STARTED ###'], [''], 'yellow');
+
 	// Prevent concurrent initialization
 	if (isInitializing) {
 		bgLog(['Init already in progress, skipping duplicate call'], [''], 'orange');
@@ -314,22 +369,31 @@ async function init() {
 
 	try {
 		var allTabs = await getSnoozedTabs();
+		bgLog(['init: Found', allTabs.length, 'total tabs in storage'], ['', 'blue', ''], 'grey');
+
 		var contextMenuPromise = setUpContextMenus(); // Start in parallel
 
+		// Check if any startup tabs need their wake time adjusted
 		var startupTabs = allTabs && allTabs.length ?
 			allTabs.filter(t => (t.startUp || (t.repeat && t.repeat.type === 'startup')) && !t.opened) : [];
 
 		if (startupTabs.length > 0) {
 			bgLog(['Found startup tabs to wake:', startupTabs.map(t => t.id).join(', ')], ['', 'green'], 'green');
+			// Modify wake times in-place
 			startupTabs.forEach(t => t.wakeUpTime = dayjs().subtract(10, 's').valueOf());
+			// Save once, then call wakeUpTask directly with modified tabs
 			await saveTabs(allTabs);
+			// Call wakeUpTask immediately with the already-modified tabs (bypasses storage read)
+			await wakeUpTask(allTabs);
 		} else {
+			bgLog(['No startup tabs found, checking for overdue tabs'], [''], 'grey');
+			// No startup tabs, just ensure alarms are set correctly
 			await wakeUpTask(allTabs);
 		}
 
 		await contextMenuPromise; // Wait for context menus
 		initializationComplete = true;
-		bgLog(['Initialization complete'], [''], 'green');
+		bgLog(['### INIT() COMPLETE ###'], [''], 'yellow');
 	} finally {
 		isInitializing = false;
 	}
@@ -351,9 +415,13 @@ chrome.runtime.onInstalled.addListener(async details => {
 });
 
 chrome.runtime.onStartup.addListener(async () => {
-	bgLog(['onStartup fired'], [''], 'yellow');
+	bgLog(['********** onStartup FIRED **********'], [''], 'yellow');
+	bgLog(['  Browser/Computer just started'], [''], 'grey');
+	// Wait briefly if initialization is already in progress from onInstalled
+	// This handles the race condition when both events fire simultaneously
 	if (isInitializing) {
 		bgLog(['Waiting for onInstalled initialization to complete...'], [''], 'blue');
+		// Wait up to 5 seconds for initialization to complete
 		for (let i = 0; i < 50; i++) {
 			if (initializationComplete) {
 				bgLog(['Initialization already complete, skipping duplicate init'], [''], 'green');
@@ -364,15 +432,30 @@ chrome.runtime.onStartup.addListener(async () => {
 		bgLog(['Timeout waiting for initialization, proceeding with init'], [''], 'orange');
 	}
 	await init();
+	bgLog(['********** onStartup FINISHED **********'], [''], 'yellow');
 });
-chrome.alarms.onAlarm.addListener(async a => { if (a.name === 'wakeUpTabs') await wakeUpTask()});
+chrome.alarms.onAlarm.addListener(async a => {
+	if (a.name === 'wakeUpTabs') {
+		bgLog(['########## ALARM FIRED ##########'], [''], 'yellow');
+		bgLog(['  Scheduled alarm triggered'], [''], 'grey');
+		await wakeUpTask();
+		bgLog(['########## ALARM FINISHED ##########'], [''], 'yellow');
+	}
+});
 if (chrome.idle) chrome.idle.onStateChanged.addListener(async s => {
+	bgLog(['~~~~~~~~~~ IDLE STATE CHANGED:', s, '~~~~~~~~~~'], ['', 'yellow', ''], 'yellow');
 	if (s === 'active' || getBrowser() === 'firefox') {
+		bgLog(['  Computer woke up from idle/sleep'], [''], 'grey');
 		if (navigator && navigator.onLine === false) {
+			bgLog(['  Offline - waiting for network connection'], [''], 'orange');
 			// MV3: Use self instead of window in service worker context
-			self.addEventListener('online', async _ => {await wakeUpTask()}, {once: true});
+			self.addEventListener('online', async _ => {
+				bgLog(['  Network back online, calling wakeUpTask'], [''], 'green');
+				await wakeUpTask();
+			}, {once: true});
 		} else {
 			await wakeUpTask();
 		}
+		bgLog(['~~~~~~~~~~ IDLE HANDLER FINISHED ~~~~~~~~~~'], [''], 'yellow');
 	}
 });
