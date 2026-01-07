@@ -68,7 +68,7 @@ async function isIncognitoAllowed() {
 
 /*	SAVE 	*/
 async function saveOption(key, val) {
-	if (!key || !val) return;
+	if (!key || val === undefined || val === null) return;
 	var o = await getOptions();
 	o[key] = val;
 	await saveOptions(o);
@@ -647,7 +647,8 @@ const DEFAULT_OPTIONS = {
 	napCollapsed: [],
 	weekStart: 0,
 	popup: {weekend: 'morning', monday: 'morning', week: 'morning', month: 'morning'},
-	contextMenu: ['startup', 'in-an-hour', 'today-evening', 'tom-morning', 'weekend']
+	contextMenu: ['startup', 'in-an-hour', 'today-evening', 'tom-morning', 'weekend'],
+	debugLogging: false
 }
 
 var calcObjectSize = obj => SIZES[typeof obj](obj);
@@ -717,6 +718,9 @@ var upgradeSettings = settings => {
 }
 
 var bgLog = (logs, colors, timestampColor = 'grey') => {
+	// Save original logs for persistence (before console formatting)
+	var originalLogs = Array.isArray(logs) ? logs.slice() : [logs];
+
 	var timestamp = dayjs().format('[%c]DD/MM/YY HH:mm:ss[%c] | ')
 	logs = logs.map(l => '%c'+l+'%c').join(' ')
 	colors.unshift(timestampColor);
@@ -725,6 +729,103 @@ var bgLog = (logs, colors, timestampColor = 'grey') => {
 		return 'color:' + (colors[c] || 'unset')
 	})
 	console.log(timestamp + logs, ...colors)
+	// Also persist to storage for debugging (use original logs without %c formatting)
+	persistentLog(originalLogs, colors, timestampColor);
+}
+
+// Queue for persistent logging to prevent race conditions
+var logQueue = [];
+var isProcessingLogQueue = false;
+
+// Persistent logging for debugging race conditions and startup issues
+async function persistentLog(logs, colors, timestampColor = 'grey') {
+	try {
+		// Check if debug logging is enabled
+		var options = await getOptions('debugLogging');
+		if (options === false) return; // Skip if disabled
+
+		var timestamp = Date.now();
+		var timestampStr = dayjs(timestamp).format('DD/MM/YY HH:mm:ss.SSS');
+
+		// Convert logs array to simple string
+		var message = Array.isArray(logs) ? logs.join(' ') : String(logs);
+
+		var logEntry = {
+			timestamp,
+			timestampStr,
+			message,
+			color: timestampColor,
+			colors: colors || []
+		};
+
+		// Add to queue instead of writing immediately
+		logQueue.push(logEntry);
+
+		// Process queue if not already processing
+		if (!isProcessingLogQueue) {
+			processLogQueue();
+		}
+	} catch (e) {
+		console.error('[Snoozz Debug] Failed to queue log:', e);
+	}
+}
+
+// Process log queue sequentially to prevent race conditions
+async function processLogQueue() {
+	if (isProcessingLogQueue) return;
+	isProcessingLogQueue = true;
+
+	try {
+		while (logQueue.length > 0) {
+			// Take all queued logs as a batch
+			var batch = logQueue.splice(0, logQueue.length);
+
+			// Read current logs from storage
+			var result = await new Promise(r => chrome.storage.local.get('debugLogs', r));
+			var debugLogs = result.debugLogs || [];
+
+			// Add all batched entries
+			debugLogs.push(...batch);
+
+			// Clean up old logs (by age)
+			var MAX_AGE_HOURS = 72; // Keep logs for 72 hours
+			var now = Date.now();
+			var cutoffTime = now - (MAX_AGE_HOURS * 60 * 60 * 1000);
+			debugLogs = debugLogs.filter(log => log.timestamp > cutoffTime);
+
+			// Limit by count (keep most recent)
+			var MAX_LOGS = 2000; // Keep last 2000 log entries
+			if (debugLogs.length > MAX_LOGS) {
+				debugLogs = debugLogs.slice(-MAX_LOGS);
+			}
+
+			// Save back to storage
+			await new Promise(r => chrome.storage.local.set({debugLogs}, r));
+
+			// Small delay to allow new logs to queue up
+			await new Promise(r => setTimeout(r, 10));
+		}
+	} catch (e) {
+		console.error('[Snoozz Debug] Failed to process log queue:', e);
+	} finally {
+		isProcessingLogQueue = false;
+
+		// Check if new logs were queued while we were processing
+		if (logQueue.length > 0) {
+			processLogQueue();
+		}
+	}
+}
+
+// Clear debug logs
+async function clearDebugLogs() {
+	return new Promise(r => chrome.storage.local.remove('debugLogs', r));
+}
+
+// Get debug logs
+async function getDebugLogs() {
+	var result = await new Promise(r => chrome.storage.local.get('debugLogs', r));
+	return result.debugLogs || [];
 }
 
 var showIconOnScroll = _ => {

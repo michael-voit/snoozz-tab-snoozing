@@ -52,7 +52,7 @@ function updateFormValues(storage) {
 	['weekend', 'monday', 'week', 'month'].forEach(po => {
 		document.querySelector(`#popup_${po}`).value = storage.popup && storage.popup[po] ? storage.popup[po] : (storage.timeOfDay || 'morning');
 	});
-	['history', 'icons', 'theme', 'notifications', 'badge', 'closeDelay', 'hourFormat', 'weekStart', 'highlightSnoozedTab'].forEach(o => {
+	['history', 'icons', 'theme', 'notifications', 'badge', 'closeDelay', 'hourFormat', 'weekStart', 'highlightSnoozedTab', 'debugLogging'].forEach(o => {
 		if (storage[o] !== undefined && document.querySelector(`#${o} option[value="${storage[o]}"]`)) {
 			document.getElementById(o).value = storage[o].toString()
 			document.getElementById(o).setAttribute('data-orig-value', storage[o]);
@@ -86,6 +86,11 @@ function addListeners() {
 	document.getElementById('reset').addEventListener('click', resetSettings);
 	document.getElementById('reset').onkeyup = e => {if (e.which === 13) resetSettings()}
 
+	document.getElementById('debugLogsLink').addEventListener('click', e => {
+		e.preventDefault();
+		openExtensionTab('/html/debug-logs.html');
+	});
+
 	document.querySelector('code').addEventListener('click', _ => {
 		clipboard('about:addons')
 		document.querySelector('body > .copied').classList.add('toast');
@@ -101,6 +106,11 @@ async function save(e) {
 		if (count > 0 && !window.confirm(`Changing this setting will remove ${count} tab${count > 1 ? 's' : ''} from your Snoozz history. Are you sure you want to continue with this change?`)) {
 			return e.target.value = e.target.getAttribute('data-orig-value');
 		}
+	}
+
+	// Auto-delete debug logs when logging is disabled
+	if (e && e.target.id === 'debugLogging' && e.target.value === 'false') {
+		await clearDebugLogs();
 	}
 
 	var options = {popup: {}}

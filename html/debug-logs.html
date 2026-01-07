@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Debug Logs | Snoozz</title>
+	<link href='../styles/debug-logs.css' rel='stylesheet'>
+</head>
+<body>
+	<div class="container">
+		<div class="header">
+			<div class="flex center">
+				<img src="../icons/ext-icon-128.png" alt="Snoozz">
+				<h1>Debug Logs</h1>
+			</div>
+			<div class="controls">
+				<button id="refreshBtn" class="btn btn-primary">
+					Refresh
+				</button>
+				<button id="exportBtn" class="btn btn-secondary">
+					Export
+				</button>
+				<button id="clearBtn" class="btn btn-danger">
+					Clear Logs
+				</button>
+				<label class="checkbox">
+					<input type="checkbox" id="autoRefresh" checked>
+					<span>Auto-refresh (2s)</span>
+				</label>
+			</div>
+		</div>
+
+		<div class="stats">
+			<div class="stat-item">
+				<span class="stat-label">Total Logs:</span>
+				<span id="totalLogs" class="stat-value">0</span>
+			</div>
+			<div class="stat-item">
+				<span class="stat-label">Last Update:</span>
+				<span id="lastUpdate" class="stat-value">-</span>
+			</div>
+			<div class="stat-item">
+				<span class="stat-label">Storage Size:</span>
+				<span id="storageSize" class="stat-value">0 KB</span>
+			</div>
+			<div class="stat-item">
+				<span class="stat-label">Debug Logging:</span>
+				<label class="toggle-switch">
+					<input type="checkbox" id="debugToggle">
+					<span class="toggle-slider"></span>
+				</label>
+			</div>
+			<div class="stat-item-right">
+				<button id="settingsBtn" class="btn btn-secondary btn-small">
+					Settings
+				</button>
+			</div>
+		</div>
+
+		<div class="filters">
+			<input type="text" id="filterInput" placeholder="Filter logs..." class="filter-input">
+			<button id="scrollBottom" class="btn btn-small">Scroll to Bottom</button>
+		</div>
+
+		<div class="logs-container">
+			<table class="logs-table">
+				<thead>
+					<tr>
+						<th class="col-time">Timestamp</th>
+						<th class="col-message">Message</th>
+					</tr>
+				</thead>
+				<tbody id="logsBody">
+					<tr>
+						<td colspan="2" class="empty-state">Loading logs...</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+	<script src='../scripts/dayjs.min.js'></script>
+	<script src='../scripts/common.js'></script>
+	<script src='../scripts/debug-logs.js'></script>
+</body>
+</html>

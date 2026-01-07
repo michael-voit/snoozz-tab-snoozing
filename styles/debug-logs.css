@@ -1,0 +1,377 @@
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+body {
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+	background: #f5f5f5;
+	color: #333;
+	line-height: 1.6;
+}
+
+.container {
+	max-width: 1400px;
+	margin: 0 auto;
+	padding: 20px;
+}
+
+.header {
+	background: white;
+	padding: 20px;
+	border-radius: 8px;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+	margin-bottom: 20px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 15px;
+}
+
+.flex.center {
+	display: flex;
+	align-items: center;
+	gap: 15px;
+}
+
+.header img {
+	width: 48px;
+	height: 48px;
+}
+
+.header h1 {
+	font-size: 24px;
+	color: #333;
+	margin: 0;
+}
+
+.controls {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.btn {
+	padding: 8px 16px;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 14px;
+	font-weight: 500;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	transition: all 0.2s;
+}
+
+.btn:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.btn-primary {
+	background: #0072BC;
+	color: white;
+}
+
+.btn-secondary {
+	background: #F3B845;
+	color: #333;
+}
+
+.btn-danger {
+	background: #DF4E76;
+	color: white;
+}
+
+.btn-small {
+	padding: 6px 12px;
+	font-size: 13px;
+}
+
+.checkbox {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	cursor: pointer;
+	user-select: none;
+}
+
+.checkbox input {
+	cursor: pointer;
+}
+
+.stats {
+	background: white;
+	padding: 15px 20px;
+	border-radius: 8px;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+	margin-bottom: 20px;
+	display: flex;
+	gap: 30px;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.stat-item {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.stat-item-right {
+	margin-left: auto;
+}
+
+.stat-label {
+	color: #666;
+	font-weight: 500;
+}
+
+.stat-value {
+	color: #0072BC;
+	font-weight: 600;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+	position: relative;
+	display: inline-block;
+	width: 44px;
+	height: 24px;
+}
+
+.toggle-switch input {
+	opacity: 0;
+	width: 0;
+	height: 0;
+}
+
+.toggle-slider {
+	position: absolute;
+	cursor: pointer;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: #ccc;
+	transition: .3s;
+	border-radius: 24px;
+}
+
+.toggle-slider:before {
+	position: absolute;
+	content: "";
+	height: 18px;
+	width: 18px;
+	left: 3px;
+	bottom: 3px;
+	background-color: white;
+	transition: .3s;
+	border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+	background-color: #0072BC;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+	transform: translateX(20px);
+}
+
+.filters {
+	background: white;
+	padding: 15px 20px;
+	border-radius: 8px;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+	margin-bottom: 20px;
+	display: flex;
+	gap: 10px;
+	align-items: center;
+}
+
+.filter-input {
+	flex: 1;
+	padding: 8px 12px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	font-size: 14px;
+}
+
+.filter-input:focus {
+	outline: none;
+	border-color: #0072BC;
+}
+
+.logs-container {
+	background: white;
+	border-radius: 8px;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+	overflow-y: auto;
+	max-height: calc(100vh - 350px);
+}
+
+.logs-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+	font-size: 13px;
+}
+
+.logs-table thead {
+	position: sticky;
+	top: 0;
+	background: #f8f9fa;
+	z-index: 10;
+}
+
+.logs-table th {
+	text-align: left;
+	padding: 12px 16px;
+	font-weight: 600;
+	color: #555;
+	border-bottom: 2px solid #dee2e6;
+}
+
+.logs-table td {
+	padding: 10px 16px;
+	border-bottom: 1px solid #f0f0f0;
+	vertical-align: top;
+}
+
+.col-time {
+	width: 180px;
+	white-space: nowrap;
+	font-weight: 500;
+}
+
+.col-message {
+	word-break: break-word;
+	white-space: pre-wrap;
+}
+
+.log-row {
+	transition: background-color 0.1s;
+}
+
+.log-row:hover {
+	background-color: #f8f9fa;
+}
+
+/* Color classes for log levels */
+.log-green { border-left: 3px solid limegreen; }
+.log-red { border-left: 3px solid crimson; }
+.log-blue { border-left: 3px solid dodgerblue; }
+.log-yellow { border-left: 3px solid gold; background-color: #fffef5; }
+.log-pink { border-left: 3px solid violet; }
+.log-orange { border-left: 3px solid orange; }
+.log-grey { border-left: 3px solid slategrey; }
+.log-cyan { border-left: 3px solid cyan; background-color: #f0fffe; }
+.log-magenta { border-left: 3px solid magenta; background-color: #fff5ff; }
+.log-default { border-left: 3px solid transparent; }
+
+.empty-state,
+.error-state,
+.warning-state {
+	text-align: center;
+	padding: 40px 20px;
+	color: #999;
+	font-style: italic;
+}
+
+.error-state {
+	color: crimson;
+}
+
+.warning-state {
+	color: orange;
+	font-size: 14px;
+	font-style: normal;
+}
+
+.warning-state a {
+	color: #0072BC;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.warning-state strong {
+	color: #DF4E76;
+}
+
+.notification {
+	position: fixed;
+	top: 20px;
+	right: 20px;
+	padding: 12px 20px;
+	border-radius: 4px;
+	color: white;
+	font-weight: 500;
+	box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+	opacity: 0;
+	transform: translateX(400px);
+	transition: all 0.3s ease;
+	z-index: 1000;
+}
+
+.notification.show {
+	opacity: 1;
+	transform: translateX(0);
+}
+
+.notification-success {
+	background: limegreen;
+}
+
+.notification-error {
+	background: crimson;
+}
+
+/* Dark theme support */
+body.dark {
+	background: #1a1a1a;
+	color: #e0e0e0;
+}
+
+body.dark .header,
+body.dark .stats,
+body.dark .filters,
+body.dark .logs-container {
+	background: #2d2d2d;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+body.dark .logs-table thead {
+	background: #3d3d3d;
+}
+
+body.dark .logs-table th {
+	color: #ccc;
+	border-bottom-color: #444;
+}
+
+body.dark .logs-table td {
+	border-bottom-color: #3d3d3d;
+}
+
+body.dark .log-row:hover {
+	background-color: #3d3d3d;
+}
+
+body.dark .filter-input {
+	background: #3d3d3d;
+	border-color: #444;
+	color: #e0e0e0;
+}
+
+body.dark .stat-label {
+	color: #aaa;
+}
+
+body.dark .header h1 {
+	color: #e0e0e0;
+}
