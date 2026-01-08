@@ -996,10 +996,10 @@ async function wakeUpTask(cachedTabs) {
 	}
 
 	// Set lock BEFORE any operations that might trigger storage changes
-	if (!cachedTabs) {
-		isWakingUp = true;
-		bgLog(['wakeUpTask: Setting isWakingUp lock'], [''], 'magenta');
-	}
+	// CRITICAL: Always set lock for ALL calls (both cached and non-cached)
+	// Without this, two cached calls can run concurrently and duplicate tabs
+	isWakingUp = true;
+	bgLog(['wakeUpTask: Setting isWakingUp lock'], [''], 'magenta');
 
 	try {
 		lastWakeUpTaskCall = now;
@@ -1014,10 +1014,9 @@ async function wakeUpTask(cachedTabs) {
 		await setNextAlarm(tabs);
 		bgLog(['<<< wakeUpTask() finished'], [''], 'cyan');
 	} finally {
-		if (!cachedTabs) {
-			isWakingUp = false;
-			bgLog(['wakeUpTask: Released isWakingUp lock'], [''], 'magenta');
-		}
+		// Always release lock, regardless of whether tabs were cached
+		isWakingUp = false;
+		bgLog(['wakeUpTask: Released isWakingUp lock'], [''], 'magenta');
 	}
 }
 
